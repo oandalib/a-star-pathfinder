@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>A* Search</title>
+    <link rel="stylesheet" href="stylesheets/style.css">
+    <script defer type="text/javascript" src="javascripts/script.js"></script>
+  </head>
+  <body>
+    <div id ="container">
+    </div>
+    <button id="reset">Reset</button>
+    <form id="my-form">
+        <button id="submit" type="submit">Find Path</button>
+    </form>
+    <div id="info">
+      <h1>A* Pathfinder</h1>
+      <ol>
+        <li>Choose start and end position<br>You may have to <b>slightly wiggle the mouse</b> when you click, this allows later for dragging your mouse for barriers</li>
+        <li>Choose barrier positions</li>
+        <li>You may remove cells with the middle mouse button</li>
+        <li>Click on the <b>Find Path</b> button</li>
+      </ol>
+      <ul>
+        <li>Yellow is the start position</li>
+        <li>Blue is the end position</li>
+        <li>Black indicates barrier</li>
+        <li>Green indicates cell has been added to open set (to be considered)</li>
+        <li>Red indicates cell has been added to closed set</li>
+        <li>Purples indicates the path found</li>
+      </ul>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+version: "3"
+services:
+  rabbitmq:
+   image: rabbitmq:3-management
+   environment:
+   - RABBITMQ_DEFAULT_USER=guest
+   - RABBITMQ_DEFAULT_PASS=guest
+   ports:
+     - "5672:5672"
+     - "15672:15672"
+   expose:
+     - "5672"
+
+  # java:
+  #   build:
+  #     context: ./java
+  #     dockerfile: Dockerfile
+
+  js:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    volumes:
+      - /app/node_modules
+      - ./app:/app
+    ports:
+      - "80:80"
+
+  # python:
+  #  build:
+  #    context: ./python
+  #    dockerfile: Dockerfile
