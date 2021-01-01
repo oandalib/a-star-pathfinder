@@ -1,12 +1,10 @@
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-
 import java.nio.charset.StandardCharsets;
 
 public class MySingletonConnection {
     private static final MySingletonConnection INSTANCE = new MySingletonConnection();
-    private static final String QUEUE_NAME = "data";
     private static Channel channel;
     private static Connection connection;
 
@@ -21,7 +19,6 @@ public class MySingletonConnection {
         try {
             connection = factory.newConnection();
             channel = connection.createChannel();
-            channel.queueDeclare(QUEUE_NAME, false, false, false, null);
         } catch (Exception e) {
             System.out.println(e);
         }
@@ -31,17 +28,28 @@ public class MySingletonConnection {
         return INSTANCE;
     }
 
-    public static void sendMessage(String msg) {
+    public static boolean generateQueue(String queueName) {
         try {
-            channel.basicPublish("", QUEUE_NAME, null, msg.getBytes(StandardCharsets.UTF_8));
-            Thread.sleep(200);
+            channel.queueDeclare(queueName, false, false, false, null);
+            return true;
+        } catch (Exception e) {
+            System.out.println(e);
+            return false;
+        }
+    }
+
+    public static void sendMessage(String msg, String queueName) {
+        try {
+            channel.basicPublish("", queueName, null, msg.getBytes(StandardCharsets.UTF_8));
+            Thread.sleep(50);
         } catch (Exception e) {
             System.out.println(e);
         }
     }
 
-    public static void closeConnection() {
+    public static void closeConnection(String queueName) {
         try {
+            channel.queueDelete(queueName);
             channel.close();
             connection.close();
         } catch (Exception e) {
