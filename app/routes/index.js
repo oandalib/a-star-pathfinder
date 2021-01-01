@@ -6,7 +6,9 @@ const { exec } = require('child_process');
 
 router.use(bodyParser.json());
 
-router.post('/update', function(req, res,next) {
+var queueCounter = 0;
+
+router.post('/update', function(req, res, next) {
   console.log("POST - UPDATE");
   amqp.connect('amqp://guest:guest@rabbitmq:5672', function(error0, connection) {
     if (error0) {
@@ -17,8 +19,9 @@ router.post('/update', function(req, res,next) {
       if (error1) {
         throw error1;
       }
-      var queue = 'data';
 
+      var queue = 'queue' + queueCounter;
+      console.log(queue);
       channel.assertQueue(queue, {
         durable: false
       });
@@ -46,7 +49,7 @@ router.post('/send', function(req, res, next) {
 
   var command = 'cd /app/java/target/classes && ' +
       'java -cp slf4j-api-1.7.26.jar:slf4j-simple-1.7.26.jar:amqp-client-5.7.1.jar:. AStarSearch '
-      + req.body.startPosition + ' ' + req.body.endPosition + ' ' + req.body.barrierSet;
+      + req.body.startPosition + ' ' + req.body.endPosition + ' ' + ++queueCounter + ' ' + req.body.barrierSet;
 
   console.log(command);
   exec(command);

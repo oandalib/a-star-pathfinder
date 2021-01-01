@@ -5,27 +5,34 @@ import java.util.PriorityQueue;
 public class AStarSearch {
     private static final MySingletonConnection myConnection = MySingletonConnection.getInstance();
     private static final int GRID_SIZE = 20;
-    private Cell startCell;
-    private Cell endCell;
-    private HashSet<Cell> barriers;
+    private final String QUEUE_NAME;
+    private final Cell START_CELL;
+    private final Cell END_CELL;
+    private final HashSet<Cell> BARRIERS;
 
     private PriorityQueue<Cell> openSet;
     private PriorityQueue<Cell> closedSet;
 
-    AStarSearch(int startPosition, int endPosition, int[] barriers) {
-        startCell = new Cell(startPosition);
-        endCell = new Cell(endPosition, null, Integer.MAX_VALUE);
+    AStarSearch(int startPosition, int endPosition, String queueCounter, int[] barriers) {
+        QUEUE_NAME = "queue" + queueCounter;
+        START_CELL = new Cell(startPosition);
+        END_CELL = new Cell(endPosition, null, Integer.MAX_VALUE);
 
-        startCell.setHScore(endCell);
+        if ( !myConnection.generateQueue(QUEUE_NAME) ) {
+            System.out.println("Failed to create queue.");
+            System.exit(-1);
+        }
+
+        START_CELL.setHScore(END_CELL);
 
         openSet = new PriorityQueue<Cell>();
         closedSet = new PriorityQueue<Cell>();
 
-        this.barriers = new HashSet<Cell>();
+        this.BARRIERS = new HashSet<Cell>();
         for (int i = 0; i < barriers.length; i++) {
-            this.barriers.add(new Cell(barriers[i]));
+            this.BARRIERS.add(new Cell(barriers[i]));
         }
-        openSet.add(startCell);
+        openSet.add(START_CELL);
     }
 
     public void findPath() {
@@ -36,22 +43,22 @@ public class AStarSearch {
         try {
             while (!openSet.isEmpty()) {
                 Cell cell = openSet.remove();
-                if ( (!cell.equals(startCell)) && (!cell.equals(endCell)) ) {
-                    myConnection.sendMessage("r" + cell.getPositionId());
+                if ( (!cell.equals(START_CELL)) && (!cell.equals(END_CELL)) ) {
+                    myConnection.sendMessage("r" + cell.getPositionId(), QUEUE_NAME);
                 }
 
                 closedSet.add(cell);
-                if (cell.equals(endCell)) {
+                if (cell.equals(END_CELL)) {
                     // we found the path
                     Cell previous = cell.getCameFrom();
-                    if (!cell.equals(startCell)) {
-                        myConnection.sendMessage("p" + previous.getPositionId());
+                    if (!cell.equals(START_CELL)) {
+                        myConnection.sendMessage("p" + previous.getPositionId(), QUEUE_NAME);
                     }
 
                     while (previous.getCameFrom() != null) {
                         previous = previous.getCameFrom();
-                        if (!previous.equals(startCell)) {
-                            myConnection.sendMessage("p" + previous.getPositionId());
+                        if (!previous.equals(START_CELL)) {
+                            myConnection.sendMessage("p" + previous.getPositionId(), QUEUE_NAME);
                         }
                     }
                     return;
@@ -59,8 +66,8 @@ public class AStarSearch {
                 addNeighborsToOpenSet(cell);
             }
         } finally {
-            myConnection.sendMessage("end");
-            MySingletonConnection.closeConnection();
+            myConnection.sendMessage("end", QUEUE_NAME);
+            myConnection.closeConnection(QUEUE_NAME);
         }
     }
 
@@ -82,7 +89,7 @@ public class AStarSearch {
                 }
                 int checkBarrier = ((cell.getY() + y) * GRID_SIZE) + cell.getX() + x;
                 // prevent moves on barriers
-                if (barriers.contains(new Cell(checkBarrier))) {
+                if (BARRIERS.contains(new Cell(checkBarrier))) {
                     continue;
                 }
 
@@ -94,10 +101,10 @@ public class AStarSearch {
                 if (openSet.contains(neighbor) || closedSet.contains(neighbor)) {
                     continue;
                 }
-                neighbor.setHScore(endCell);
+                neighbor.setHScore(END_CELL);
                 openSet.add(neighbor);
-                if (!neighbor.equals(endCell)) {
-                    myConnection.sendMessage("g" + neighbor.getPositionId());
+                if (!neighbor.equals(END_CELL)) {
+                    myConnection.sendMessage("g" + neighbor.getPositionId(), QUEUE_NAME);
                 }
             }
         }
@@ -107,12 +114,14 @@ public class AStarSearch {
         try {
             int startPosition = Integer.parseInt(args[0]);
             int endPosition = Integer.parseInt(args[1]);
-            int[] numbers = {};
-            if (args.length == 3) {
-                numbers = Arrays.stream(args[2].split(",")).mapToInt(Integer::parseInt).toArray();
+            String queueCounter = args[2];
+
+            int[] barriers = {};
+            if (args.length == 4) {
+                barriers = Arrays.stream(args[3].split(",")).mapToInt(Integer::parseInt).toArray();
             }
 
-            AStarSearch app = new AStarSearch(startPosition, endPosition, numbers);
+            AStarSearch app = new AStarSearch(startPosition, endPosition, queueCounter, barriers);
             app.findPath();
         }  catch (Exception e) {
             System.out.println(e);
