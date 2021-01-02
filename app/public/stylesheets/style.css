@@ -23,14 +23,19 @@ a {
   padding: 1em;
   border: 1px solid #ddd;
   text-align: center;
-
 }
 
 button {
   padding: 5px;
-  margin: 5px;
+  margin: 20px;
+}
+
+#my-form {
+  padding: 10px;
+  margin: 20px;
 }
 
 #info {
-  float: right;
+  float: left;
+  padding: 10px;
 }
