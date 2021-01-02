@@ -11,11 +11,6 @@ services:
    expose:
      - "5672"
 
-  # java:
-  #   build:
-  #     context: ./java
-  #     dockerfile: Dockerfile
-
   js:
     build:
       context: ./app
@@ -25,8 +20,3 @@ services:
       - ./app:/app
     ports:
       - "80:80"
-
-  # python:
-  #  build:
-  #    context: ./python
-  #    dockerfile: Dockerfile

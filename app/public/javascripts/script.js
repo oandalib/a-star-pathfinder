@@ -23,9 +23,12 @@ function makeRows(rows, cols) {
       started = true;
       var barrierArray = Array.from(barrierSet);
 
+      var diagonal = document.getElementById('diagonal').checked;
+
       var data = JSON.stringify({ startPosition: startPosition,
                                   endPosition: endPosition,
-                                  barrierSet: barrierArray });
+                                  barrierSet: barrierArray,
+                                  diagonal: diagonal});
 
       sendData(data);
     }
@@ -105,7 +108,6 @@ function sendData(data) {
     body: data
   });
   fetchMostRecentData();
-
 }
 
 function fetchMostRecentData() {

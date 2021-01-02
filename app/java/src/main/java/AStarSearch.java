@@ -5,34 +5,38 @@ import java.util.PriorityQueue;
 public class AStarSearch {
     private static final MySingletonConnection myConnection = MySingletonConnection.getInstance();
     private static final int GRID_SIZE = 20;
-    private final String QUEUE_NAME;
-    private final Cell START_CELL;
-    private final Cell END_CELL;
-    private final HashSet<Cell> BARRIERS;
+    private final String queueName;
+    private final Cell startCell;
+    private final Cell endCell;
+    private final boolean allowDiagonalMoves;
+    private final HashSet<Cell> barriers;
 
     private PriorityQueue<Cell> openSet;
     private PriorityQueue<Cell> closedSet;
 
-    AStarSearch(int startPosition, int endPosition, String queueCounter, int[] barriers) {
-        QUEUE_NAME = "queue" + queueCounter;
-        START_CELL = new Cell(startPosition);
-        END_CELL = new Cell(endPosition, null, Integer.MAX_VALUE);
+    AStarSearch(int startPosition, int endPosition, String queueCounter, boolean allowDiagonalMoves, int[] barriers) {
+        queueName = "queue" + queueCounter;
 
-        if ( !myConnection.generateQueue(QUEUE_NAME) ) {
+        if ( !myConnection.generateQueue(queueName) ) {
             System.out.println("Failed to create queue.");
             System.exit(-1);
         }
 
-        START_CELL.setHScore(END_CELL);
+        startCell = new Cell(startPosition);
+        endCell = new Cell(endPosition, null, Integer.MAX_VALUE);
+
+        startCell.setHScore(endCell);
+
+        this.allowDiagonalMoves = allowDiagonalMoves;
 
         openSet = new PriorityQueue<Cell>();
         closedSet = new PriorityQueue<Cell>();
 
-        this.BARRIERS = new HashSet<Cell>();
+        this.barriers = new HashSet<Cell>();
         for (int i = 0; i < barriers.length; i++) {
-            this.BARRIERS.add(new Cell(barriers[i]));
+            this.barriers.add(new Cell(barriers[i]));
         }
-        openSet.add(START_CELL);
+        openSet.add(startCell);
     }
 
     public void findPath() {
@@ -43,22 +47,22 @@ public class AStarSearch {
         try {
             while (!openSet.isEmpty()) {
                 Cell cell = openSet.remove();
-                if ( (!cell.equals(START_CELL)) && (!cell.equals(END_CELL)) ) {
-                    myConnection.sendMessage("r" + cell.getPositionId(), QUEUE_NAME);
+                if ( (!cell.equals(startCell)) && (!cell.equals(endCell)) ) {
+                    myConnection.sendMessage("r" + cell.getPositionId(), queueName);
                 }
 
                 closedSet.add(cell);
-                if (cell.equals(END_CELL)) {
+                if (cell.equals(endCell)) {
                     // we found the path
                     Cell previous = cell.getCameFrom();
-                    if (!cell.equals(START_CELL)) {
-                        myConnection.sendMessage("p" + previous.getPositionId(), QUEUE_NAME);
+                    if (!cell.equals(startCell)) {
+                        myConnection.sendMessage("p" + previous.getPositionId(), queueName);
                     }
 
                     while (previous.getCameFrom() != null) {
                         previous = previous.getCameFrom();
-                        if (!previous.equals(START_CELL)) {
-                            myConnection.sendMessage("p" + previous.getPositionId(), QUEUE_NAME);
+                        if (!previous.equals(startCell)) {
+                            myConnection.sendMessage("p" + previous.getPositionId(), queueName);
                         }
                     }
                     return;
@@ -66,8 +70,8 @@ public class AStarSearch {
                 addNeighborsToOpenSet(cell);
             }
         } finally {
-            myConnection.sendMessage("end", QUEUE_NAME);
-            myConnection.closeConnection(QUEUE_NAME);
+            myConnection.sendMessage("end", queueName);
+            myConnection.closeConnection(queueName);
         }
     }
 
@@ -79,8 +83,10 @@ public class AStarSearch {
                     continue;
                 }
                 // prevent diagonal moves
-                if ( (x == -1 && y == -1) || (x == -1 && y == 1) || (x == 1 && y == -1) || (x == 1 && y == 1) ){
-                    continue;
+                if ( (x == -1 && y == -1) || (x == -1 && y == 1) || (x == 1 && y == -1) || (x == 1 && y == 1) ) {
+                    if (!allowDiagonalMoves) {
+                        continue;
+                    }
                 }
                 // prevent out of grid
                 if ( (cell.getX() + x < 0) || (cell.getX() + x > GRID_SIZE - 1) ||
@@ -89,7 +95,7 @@ public class AStarSearch {
                 }
                 int checkBarrier = ((cell.getY() + y) * GRID_SIZE) + cell.getX() + x;
                 // prevent moves on barriers
-                if (BARRIERS.contains(new Cell(checkBarrier))) {
+                if (barriers.contains(new Cell(checkBarrier))) {
                     continue;
                 }
 
@@ -101,10 +107,10 @@ public class AStarSearch {
                 if (openSet.contains(neighbor) || closedSet.contains(neighbor)) {
                     continue;
                 }
-                neighbor.setHScore(END_CELL);
+                neighbor.setHScore(endCell);
                 openSet.add(neighbor);
-                if (!neighbor.equals(END_CELL)) {
-                    myConnection.sendMessage("g" + neighbor.getPositionId(), QUEUE_NAME);
+                if (!neighbor.equals(endCell)) {
+                    myConnection.sendMessage("g" + neighbor.getPositionId(), queueName);
                 }
             }
         }
@@ -116,12 +122,14 @@ public class AStarSearch {
             int endPosition = Integer.parseInt(args[1]);
             String queueCounter = args[2];
 
+            boolean allowDiagonalMoves = Boolean.parseBoolean(args[3]);
+
             int[] barriers = {};
-            if (args.length == 4) {
-                barriers = Arrays.stream(args[3].split(",")).mapToInt(Integer::parseInt).toArray();
+            if (args.length == 5) {
+                barriers = Arrays.stream(args[4].split(",")).mapToInt(Integer::parseInt).toArray();
             }
 
-            AStarSearch app = new AStarSearch(startPosition, endPosition, queueCounter, barriers);
+            AStarSearch app = new AStarSearch(startPosition, endPosition, queueCounter, allowDiagonalMoves, barriers);
             app.findPath();
         }  catch (Exception e) {
             System.out.println(e);
